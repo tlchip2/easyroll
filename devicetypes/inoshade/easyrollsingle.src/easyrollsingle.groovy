@@ -32,6 +32,10 @@ metadata {
         capability "Momentary"
         capability "Health Check"
         
+        capability "Relay Switch"
+        capability "Sensor"
+        capability "Actuator"
+        
         command "refresh"
 
 		command "up"
@@ -52,17 +56,16 @@ metadata {
 
     preferences {
         input "easyrollAddress1", "text", type:"text", title:"IP Address 1", description: "enter easyroll address must be [ip]:[port] ", required: true
-        input "ezInterval", "number", title: "Check Interval (unit:sec, 61: not checking)", description: "How often do you want to check the level of the blind?", range: "10..61", defaultValue: 10,  required: true 
-        
         input name: "setMode", type: "bool", title: "SetMode", description: "On/Off"
+
     }
 
 	simulator {
 		// TODO: define status and reply messages here
 	}
+    
 
-
-	tiles(scale: 2)  {
+tiles(scale: 2)  {
     	multiAttributeTile(name: "windowShade", type: "generic", width: 6, height: 4) {
             tileAttribute("device.windowShade", key: "PRIMARY_CONTROL") {
                 attributeState("closed", label: 'closed', action: "windowShade.open", icon: "st.doors.garage.garage-closed", backgroundColor: "#A8A8C6", nextState: "closed")
@@ -121,6 +124,7 @@ metadata {
 	}
 }
 
+
 def installed() {
     //log.debug "installed()"
     updated()
@@ -150,8 +154,7 @@ def resetting(){
 def poll() {
 	//log.debug("poll")
 	getCurData()
-    runIn(ezInterval as int, poll)
-}
+    }
 
 /*refresh: 블라인드 위치값을 알기 위해 사용(추후 polling으로도 사용 가능)*/
 def refresh() {
@@ -178,7 +181,6 @@ def runAction(String uri, String mode, def command){
             "command:"+ "${command}"+
         '}'
     ]
-
     def myhubAction = new physicalgraph.device.HubAction(options, null)
     sendHubCommand(myhubAction)
 }
@@ -247,8 +249,8 @@ def up() {
     if (setMode == true) {
     	runAction("/action", "force", "FTU")
     } else {
-    	runAction("/action", "general", "TU")
-    }  
+        setLevel(100)
+}  
 }
 //멈춤
 def stop() {
@@ -257,6 +259,8 @@ def stop() {
     	runAction("/action", "force", "FSS")
     } else {
     	runAction("/action", "general", "SS")
+        refresh()
+        poll()
     } 
 }
 //내리기(세팅모드일때는 강제내림)
@@ -265,7 +269,7 @@ def down() {
     if (setMode == true) {
         runAction("/action", "force", "FBD")
     } else {
-    	runAction("/action", "general", "BD")
+        setLevel(0)
     } 
 }
 //한 칸 올리기(세팅모드일때는 강제 한 칸 올리기)
@@ -275,6 +279,8 @@ def jogUp() {
         runAction("/action", "force", "FSU")
     } else {
     	runAction("/action", "general", "SU")
+        refresh()
+        poll()
     } 
 }
 //한 칸 내리기(세팅모드일때는 강제 한 칸 내리기)
@@ -284,6 +290,8 @@ def jogDown() {
         runAction("/action", "force", "FSD")
     } else {
     	runAction("/action", "general", "SD")
+        refresh()
+        poll()
     } 
 }
 //메모리1 이동 (세팅 모드 시 현재 위치 메모리1에 저장)
